@@ -36,6 +36,8 @@ SHOE = (214, 44, 52, 255)
 SOLE = (250, 250, 250, 255)
 PAPER = (250, 248, 236, 255)
 TEAR = (120, 196, 255, 255)
+GLASS = (206, 226, 236, 255)
+WHISKEY = (212, 128, 32, 255)
 HEART = (236, 72, 120, 255)
 
 
@@ -147,6 +149,17 @@ def draw_head(d, dy, eye, mouth, look):
 
 # ---------------------------------------------------------------- props
 
+def draw_glass(d, x, y, level):
+    """Rocks glass of whiskey (flared rim, thick base); *level* = liquid height in px."""
+    d.polygon([(x - 1, y), (x + 6, y), (x + 5, y + 7), (x, y + 7)], fill=GLASS)
+    d.line([(x, y + 7), (x + 5, y + 7)], fill=(160, 184, 196, 255))       # heavy base
+    if level:
+        d.rectangle([x + 1, y + 7 - level, x + 4, y + 6], fill=WHISKEY)
+        d.line([(x + 1, y + 7 - level), (x + 4, y + 7 - level)], fill=(240, 176, 72, 255))
+    d.rectangle([x + 2, y + 6 - level, x + 3, y + 7 - level], fill=EYE_WHITE)  # ice cube
+    d.point((x, y + 1), fill=EYE_WHITE)                                          # glint
+
+
 def draw_paper(d, x, y):
     d.rectangle([x, y, x + 8, y + 10], fill=PAPER)
     for ly in range(y + 2, y + 10, 2):
@@ -206,7 +219,12 @@ def frame(dy=0, head_dy=0, l_arm=(12, 40), r_arm=(28, 40), l_foot=(17, 48), r_fo
     if front_arm:
         c.part(draw_arm, (26, 30 + dy), (r_arm[0], r_arm[1] + dy))
     for kind, *args in props:
-        if kind == "paper":
+        if kind == "drink":
+            hx, hy, level = args
+            c.part(draw_arm, (26, 30 + dy), (hx, hy + dy))
+            c.part(draw_glass, hx - 1, hy - 6 + dy, level)
+            c.part(lambda d: d.ellipse([hx - 2, hy - 2 + dy, hx + 1, hy + 1 + dy], fill=FUR))  # fingers
+        elif kind == "paper":
             c.part(draw_paper, args[0], args[1] + dy)
             c.part(draw_arm, (26, 30 + dy), (args[0] + 1, args[1] + 8 + dy))
         elif kind == "dots":
@@ -233,8 +251,12 @@ def run_cycle(i, extra=()):
 
 
 def row_idle(i):
-    bob = 1 if i in (2, 3, 4) else 0
-    return frame(dy=bob, eye="closed" if i == 4 else "half")
+    # nurse a whiskey: hold, hold, raise, sip, lower, hold (a bit emptier)
+    hand = ((29, 37), (29, 37), (31, 31), (34, 26), (31, 31), (29, 37))[i]
+    level = (5, 5, 5, 4, 3, 3)[i]
+    eye = "closed" if i == 3 else "half"
+    return frame(dy=1 if i in (1, 5) else 0, eye=eye, mouth="flat" if i == 3 else "smirk",
+                 props=(("drink", *hand, level),))
 
 
 def row_run_right(i):
